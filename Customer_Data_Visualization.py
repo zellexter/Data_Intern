@@ -4,6 +4,7 @@ from openpyxl.chart import (
     LineChart,
     Reference,
 )
+import os
 from openpyxl.chart.axis import DateAxis
 import pandas as pd
 import numpy as np
@@ -16,13 +17,16 @@ from datetime import date
 # DONE make efficient with ws
 # DONE rename file
 # TODO try out df.aggregate
+# TODO def visulaize(col_name, is_month, chart_type)
+# TODO edit functions to include 'if is_month'
+
 
 # STEP BY STEP
 # DONE get raw data 
 # DONE aggregate data into usable format
 #   DONE line chart by day)
 #       format into two cols, date and how many fw created on each date
-#   TODO bar chart by month)
+#   DONE line chart by month)
 #       format date data into mm/yyyy - testing on testpage.py
 #       format data into list within list containing [date, count]
 #       append into ws
@@ -34,11 +38,16 @@ from datetime import date
 
 ### note: put visualizations and data onto same sheet
 
+# basic_user_registration_data  self disclosed data
+# user_viewing_behavior_data  uid, time, like, share, comment, topic
+# user_follow_behavior_data   uid, following, follow_by
+# heuristic_user_data         
 
 filepath = r'C:\Users\miche\OneDrive\Documents\CodingwDad\dad_intern\py-xl-chart.xlsx'
 dict_df = pd.read_excel(io=filepath, sheet_name=['Data'], usecols=[1,36,37]) # import xlsx file, Data sheet, columns for mode, fwcreatedate, and nettype
 df = dict_df['Data']
 
+df['FwCreateMonth'] = df['FwCreateDate'].str.slice(0,7)
 
 # Creates new workbook and retitles ws1 to 'Raw', creates 2 other sheets
 data_v = Workbook()
@@ -54,12 +63,23 @@ ws3 = data_v['Visualization']
 
 # 3 seperate columns for mode, fwcreatedate, and nettype
 mode = df.loc[:, 'Mode']
-fw_create_date = df.loc[:, 'FwCreateDate']
+# fw_create_date = df.loc[:, 'FwCreateDate']
+fw_create_date = df.loc[:, 'FwCreateMonth']
 net_type = df.loc[:,'NetType']
 
 # creates sorted_count_date list within list [date, count], adds header in formatted_date_data
 count_date = Counter(list(fw_create_date))
+count_date.pop(np.nan, None) # pop np.nan from data, if nonexistent then do nothing
+
+# dictionary comp ONLY if the data is in YYYY-mm, NOT YYYY-mm-dd. Assigning false day value to YYYY-mm to use date function later
+if list(count_date.keys())[0].count('-') == 1:
+    count_date = {
+     (k + '-01') : v # what we are doing
+     for k, v in count_date.items() # for which items
+     if k is not np.nan # conditional # use is not for np.nan because we don't know if unknowns == unknowns, but we DO know if something IS NOT unknown
+     }
 list_count_date = count_date.items()
+
 sorted_count_date = sorted([[date(*[int(item) for item in k.split('-')]),v] #what we are doing to the items
                             for k,v in count_date.items() #where we find the items from
                             if k is not np.nan] #conditional filter
@@ -100,7 +120,7 @@ linechart_fw_creation_date.add_data(data, titles_from_data=True)
 linechart_fw_creation_date.set_categories(dates)
 
 ws2.add_chart(linechart_fw_creation_date, 'C1')
-data_v.save('dv_intern.xlsx')
+data_v.save(os.path.join('Data_Intern', 'dv_intern.xlsx'))
 
 
 
