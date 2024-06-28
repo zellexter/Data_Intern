@@ -20,8 +20,12 @@ from datetime import date
 # DONE def visulaize(col_name, is_month, chart_type)
 # DONE edit functions to include 'if is_month'
 # TODO save into different worksheets
-#   line 50 add new arg into for loop
-#   format_data() wb to ws
+#   DONE main() add new arg into for loop that defines ws variable as prepare_ws()
+#   TODO function prepare_ws() that creates new ws (like prepare_wb) with specified title (related to col_name)
+#   TODO revisit prepare_wb() and edit out obsolete code
+#   TODO format_data() wb to ws, appends all formatted data into specified ws instead of wb
+#   TODO draw_line_chart() wb to ws, take data from specified ws instead of wb
+#   TODO save_chart() wb to ws, save chart into specified ws instead of wb
 
 
 # STEP BY STEP
@@ -54,11 +58,11 @@ def main():
         ('FwCreateMonth', 'dv_intern_month.xlsx'),
     ]:
         wb = prepare_wb()
+        ws = prepare_ws()
         format_data(df, wb, col_name)
         linechart_fw_creation_date = draw_line_chart(wb)
         save_chart(wb, linechart_fw_creation_date, output_file)
     
-
 
 def import_data(filepath):
     dict_df = pd.read_excel(io=filepath, sheet_name=['Data'], usecols=[1,36,37]) # import xlsx file, Data sheet, columns for mode, fwcreatedate, and nettype
@@ -69,14 +73,21 @@ def import_data(filepath):
     return df
 
 
+# TODO edit out obsolete lines that are made unnecessary by prepare_ws()
 def prepare_wb():
-    # Creates new workbook and retitles ws1 to 'Raw', creates 2 other sheets
+    '''This function creates a new workbook'''
     wb = Workbook()
     ws = wb.active
     ws.title = 'Formatted'
     return wb
 
 
+# TODO 
+def prepare_ws(): # pass in col_name as name for ws
+    '''This function creates a new worksheet in the workbook'''
+
+
+# TODO wb to ws, working in ws not wb
 def format_data(df, wb, col_name):
     '''This function creates a visualization for date data'''
     
@@ -114,6 +125,7 @@ def format_data(df, wb, col_name):
             ws2.append(row)
         
 
+# TODO wb to ws, drawing in ws not wb
 def draw_line_chart(wb):
     # Line Chart for Frequency of Firewall Creation by Date
     linechart_fw_creation_date = LineChart()
@@ -146,6 +158,7 @@ def draw_line_chart(wb):
     return linechart_fw_creation_date
 
 
+# TODO wb to ws, saving chart to ws not wb
 def save_chart(wb, linechart_fw_creation_date, output_file):
     ws2 = wb['Formatted']
     ws2.add_chart(linechart_fw_creation_date, 'C1')
