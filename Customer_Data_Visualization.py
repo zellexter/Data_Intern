@@ -19,13 +19,13 @@ from datetime import date
 # TODO try out df.aggregate
 # DONE def visulaize(col_name, is_month, chart_type)
 # DONE edit functions to include 'if is_month'
-# TODO save into different worksheets
+# DONE save into different worksheets
 #   DONE main() add new arg into for loop that defines ws variable as prepare_ws()
-#   TODO function prepare_ws() that creates new ws (like prepare_wb) with specified title (related to col_name)
-#   TODO revisit prepare_wb() and edit out obsolete code
-#   TODO format_data() wb to ws, appends all formatted data into specified ws instead of wb
-#   TODO draw_line_chart() wb to ws, take data from specified ws instead of wb
-#   TODO save_chart() wb to ws, save chart into specified ws instead of wb
+#   DONE function prepare_ws() that creates new ws (like prepare_wb) with specified title (related to col_name)
+#   DONE revisit prepare_wb() and edit out obsolete code
+#   DONE format_data() wb to ws, appends all formatted data into specified ws instead of wb
+#   DONE draw_line_chart() wb to ws, take data from specified ws instead of wb
+#   DONE save_chart() wb to ws, save chart into specified ws instead of wb
 
 
 # STEP BY STEP
@@ -53,15 +53,16 @@ from datetime import date
 def main():
     filepath = r'C:\Users\miche\OneDrive\Documents\CodingwDad\dad_intern\py-xl-chart.xlsx'
     df = import_data(filepath)
-    for col_name, output_file in [
-        ('FwCreateDate', 'dv_intern_daily.xlsx'),
-        ('FwCreateMonth', 'dv_intern_month.xlsx'),
+    save_file = os.path.join('Data_Intern', 'data_intern.xlsx')
+    wb = prepare_wb()
+    for col_name, output_worksheet in [
+        ('FwCreateDate', 'Daily Chart'),
+        ('FwCreateMonth', 'Monthly Chart'),
     ]:
-        wb = prepare_wb()
-        ws = prepare_ws()
-        format_data(df, wb, col_name)
-        linechart_fw_creation_date = draw_line_chart(wb)
-        save_chart(wb, linechart_fw_creation_date, output_file)
+        ws = prepare_ws(wb, output_worksheet)
+        format_data(df, ws, col_name)
+        draw_line_chart(ws)
+    save_wb(wb, save_file)
     
 
 def import_data(filepath):
@@ -73,22 +74,20 @@ def import_data(filepath):
     return df
 
 
-# TODO edit out obsolete lines that are made unnecessary by prepare_ws()
 def prepare_wb():
     '''This function creates a new workbook'''
     wb = Workbook()
-    ws = wb.active
-    ws.title = 'Formatted'
+    wb.remove(wb['Sheet'])
     return wb
 
 
-# TODO 
-def prepare_ws(): # pass in col_name as name for ws
+def prepare_ws(wb, ws_name): # pass in col_name as name for ws
     '''This function creates a new worksheet in the workbook'''
+    ws = wb.create_sheet(ws_name)
+    return ws
 
 
-# TODO wb to ws, working in ws not wb
-def format_data(df, wb, col_name):
+def format_data(df, ws, col_name):
     '''This function creates a visualization for date data'''
     
     # 3 seperate columns for mode, fwcreatedate, and nettype
@@ -118,15 +117,13 @@ def format_data(df, wb, col_name):
     formatted_date_data = count_date_headers + sorted_count_date
     # return formatted_date_data
 
-    ws2 = wb['Formatted']
     # appends formatted_date_data to ws2 only if ws2 is empty (to stop it from appending again every time the code is run)
-    if ws2['A1'].value == None: # check ws2 is empty
+    if ws['A1'].value == None: # check ws2 is empty
         for row in formatted_date_data:
-            ws2.append(row)
+            ws.append(row)
         
 
-# TODO wb to ws, drawing in ws not wb
-def draw_line_chart(wb):
+def draw_line_chart(ws):
     # Line Chart for Frequency of Firewall Creation by Date
     linechart_fw_creation_date = LineChart()
     linechart_fw_creation_date.title = 'Frequency of Firewall Creation by Date'
@@ -139,30 +136,26 @@ def draw_line_chart(wb):
     linechart_fw_creation_date.x_axis.title = 'Date'
     
     # where to reference data from
-    ws2 = wb['Formatted']
-    data = Reference(ws2,
+    data = Reference(ws,
                     min_col=2,
                     min_row=2,
                     max_col=2,
-                    max_row=ws2.max_row,
+                    max_row=ws.max_row,
                     )
-    dates = Reference(ws2,
+    dates = Reference(ws,
                     min_col=1,
                     min_row=2,
                     max_col=1,
-                    max_row=ws2.max_row,
+                    max_row=ws.max_row,
                     )
     linechart_fw_creation_date.add_data(data, titles_from_data=True)
     linechart_fw_creation_date.set_categories(dates)
 
-    return linechart_fw_creation_date
+    ws.add_chart(linechart_fw_creation_date, 'C1')
 
 
-# TODO wb to ws, saving chart to ws not wb
-def save_chart(wb, linechart_fw_creation_date, output_file):
-    ws2 = wb['Formatted']
-    ws2.add_chart(linechart_fw_creation_date, 'C1')
-    wb.save(os.path.join('Data_Intern', output_file))
+def save_wb(wb, output_file):
+    wb.save(output_file)
 
 
 if __name__ == '__main__':
