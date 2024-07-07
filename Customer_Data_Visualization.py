@@ -5,6 +5,7 @@ from openpyxl.chart import (
     PieChart,
     ProjectedPieChart,
 )
+from openpyxl.chart.label import DataLabelList
 import os
 from openpyxl.chart.axis import DateAxis
 import pandas as pd
@@ -32,6 +33,11 @@ from datetime import date
 # TODO generalize format_data() to exclude pulling specific columns
 #   pass in which columns and where to put data
 #   pass in type of data and how to treat
+# TODO create net type data visualization piechart
+#   DONE create general pie chart for mode types
+# TODO generalize reference columns, size of current data (len)
+#   TODO generalize piechart.title
+# TODO generalize for loops in main function so that you can pass in the needed columns of data from df
 
 
 # STEP BY STEP
@@ -86,11 +92,13 @@ class DataVisualization():
 
         # create piechart
         for col_name, output_worksheet in [
-            ('Mode', 'Mode Piechart')
+            ('Mode', 'Mode Piechart'),
+            # ('CloudSec', 'CloudSec NetType Piechart'),
+            # ('Netsec', 'Netsec NetType Piechart'),
         ]:
             ws = self.prepare_ws(output_worksheet)
             self.format_data_piechart(df, ws, col_name)
-            self.draw_piechart(ws)
+            self.draw_piechart(ws, chart_title=output_worksheet)
 
         self.save_wb()
         
@@ -158,6 +166,8 @@ class DataVisualization():
             
     def format_data_piechart(self, df, ws, col_name):
         '''This function creates visualization for a piechart'''
+        # TODO generalize to pass in any col_name
+    
 
         # create column for mode data
         mode = df.loc[:, col_name]
@@ -166,8 +176,12 @@ class DataVisualization():
         count_mode = Counter(list(mode))
         count_mode.pop(np.nan, None) # pop np.nan from data, if nonexistent then do nothing
 
+        # total variable to assist in converting to percentage
+        # Counter({'NetSec': 943, 'CloudSec': 723})
+        total_count = count_mode['NetSec'] + count_mode['CloudSec']
+
         # list comp to sort mode types into usable format
-        sorted_count_mode = sorted([[k,v]
+        sorted_count_mode = sorted([[k,v/total_count]
                                     for k,v in count_mode.items()
                                     if k is not np.nan] # gets rid of np.nan
                                    )
@@ -177,16 +191,15 @@ class DataVisualization():
 
         # appends formatted_mode_data to ws2 only if ws2 is empty (to stop it from appending again every time the code is run)
         if ws['A1'].value == None: # check ws2 is empty
-            for row in formatted_mode_data:
-                ws.append(row)
+            for row_num, row_data in enumerate(formatted_mode_data, start=2):
+                ws.append(row_data)
+                # convert to percentage
+                ws.cell(row=row_num, column=2).number_format = '0.0%'
 
-
-
-    def format_data_projectedpiechart(self, df, ws, col_name):
-        ''''''
 
     def draw_linechart(self, ws):
         '''This function draws a line chart and saves it into a cell'''
+        # TODO generalize title
 
         # Line Chart
         linechart = LineChart()
@@ -217,17 +230,22 @@ class DataVisualization():
 
         ws.add_chart(linechart, 'C1')
 
-    def draw_piechart(self, ws):
+    def draw_piechart(self, ws, chart_title):
         '''This function draws a pie chart and saves it into a cell'''
-        # TODO generalize column
-        # TODO show percentages
+        # TODO generalize reference columns, size of current data (len)
+        # TODO generalize piechart.title
         
+        # creating pie chart
         piechart = PieChart()
         labels = Reference(ws, min_col=1, min_row=3, max_row=4)
         data = Reference(ws, min_col=2, min_row=2, max_row=4)
         piechart.add_data(data, titles_from_data=True)
         piechart.set_categories(labels)
-        piechart.title = 'Mode Types'
+        piechart.title = chart_title
+
+        # showing data labels as percentage
+        piechart.dataLabels = DataLabelList()
+        piechart.dataLabels.showVal = True
 
         # add chart to ws
         ws.add_chart(piechart, 'C1')
