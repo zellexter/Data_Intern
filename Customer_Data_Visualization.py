@@ -21,6 +21,9 @@ from datetime import date
 # format_data_linechart() passes in is_month with a default value of False.
 # generalize variables in format_data_piechart() 
 
+# draw_linechart() passes in x_axis and y_axis in function and chart title 
+#   when defining the class method need to pass in self as first argument. not needed when you call the method.
+
 
 # DONE visualize data into date line chart https://openpyxl.readthedocs.io/en/stable/charts/line.html
 # DONE line 62 linechart_fw_creation_date.y_axis.crossAx ????
@@ -49,7 +52,8 @@ from datetime import date
 #   DONE generalize piechart.title
 # DONE generalize for loops in main function so that you can pass in the needed columns of data from df
 # TODO create VisualizationType() Class with all draw_chart functions and format data functions*** WAIT FOR DAD 
-# TODO generalize format data function to pass in type of chart, combine pie and line format data functions
+# TODO/IN PROGRESS LINE 212 format_data()
+#   generalize format data function to pass in type of chart, combine pie and line format data functions
 # TODO generalize draw chart function to pass in type of chart
 # TODO generalize main() for loops to pass in type of chart
 
@@ -96,23 +100,25 @@ class DataVisualization():
         self.wb = self.prepare_wb()
 
         # create linechart
-        for col_name, output_worksheet, is_month in [
-            ('FwCreateDate', 'Daily Chart', False),
-            ('FwCreateMonth', 'Monthly Chart', True),
+        for col_name, output_worksheet, is_month, x_axis, y_axis in [
+            ('FwCreateDate', 'Daily Chart', False, 'Date', 'Firewalls Created'),
+            ('FwCreateMonth', 'Monthly Chart', True, 'Date', 'Firewalls Created'),
             ]:
             ws = self.prepare_ws(output_worksheet)
             self.format_data_linechart(df, ws, col_name, is_month)
-            self.draw_linechart(ws)
+            self.draw_linechart(ws, x_axis, y_axis, output_worksheet)
+
 
         # create piechart
-        for col_name, output_worksheet,  in [
-            ('Mode', 'Mode Piechart', ),
-            # ('CloudSec', 'CloudSec NetType Piechart', ),
-            # ('Netsec', 'Netsec NetType Piechart', ),
+        for col_name, output_worksheet in [
+            ('Mode', 'Mode Piechart'),
+            ('CloudSec_NetType', 'CloudSec NetType Piechart'),
+            ('NetSec_NetType', 'Netsec NetType Piechart'),
             # IN ORDER TO DO THESE^^ need to add data to df
+            # df.NetTypeOfCloudSec = func(df.NetType)
         ]:
             ws = self.prepare_ws(output_worksheet)
-            self.format_data_piechart(df, ws, col_name, )
+            self.format_data_piechart(df, ws, col_name)
             self.draw_piechart(ws, chart_title=output_worksheet)
 
         self.save_wb()
@@ -126,7 +132,10 @@ class DataVisualization():
         dict_df = pd.read_excel(io=self.input_file, sheet_name=['Data']) 
         df = dict_df['Data']
 
+        # generalize TODO
         df['FwCreateMonth'] = df['FwCreateDate'].str.slice(0,7)
+        df['CloudSec_NetType'] = df.apply(lambda row: row['NetType'] if row['Mode'] == 'CloudSec' else np.nan, axis=1)
+        df['NetSec_NetType'] = df.apply(lambda row: row['NetType'] if row['Mode'] == 'NetSec' else np.nan, axis=1)
 
         return df
 
@@ -145,7 +154,7 @@ class DataVisualization():
 
 
     def format_data_linechart(self, df, ws, col_name, is_month=False):
-        '''This function creates a visualization for date data'''
+        '''This function formats date data for a linechart'''
 
         data = df.loc[:, col_name]
 
@@ -168,7 +177,7 @@ class DataVisualization():
                                 for k,v in count_data.items() #where we find the items from
                                 if k is not np.nan] #conditional filter
                                 )
-        count_data_headers = [['Date','Count']]
+        count_data_headers = [[col_name,'Count']]
         formatted_date_data = count_data_headers + sorted_count_data
         # return formatted_date_data
 
@@ -176,9 +185,9 @@ class DataVisualization():
         if ws['A1'].value == None: # check ws2 is empty
             for row in formatted_date_data:
                 ws.append(row)
-            
+
     def format_data_piechart(self, df, ws, col_name):
-        '''This function creates visualization for a piechart'''
+        '''This function formats data for a piechart'''
 
         # create column for data
         data = df.loc[:, col_name]
@@ -189,12 +198,11 @@ class DataVisualization():
 
         # total variable to assist in converting to percentage
         # Counter({'NetSec': 943, 'CloudSec': 723})
-        total_count = count_data['NetSec'] + count_data['CloudSec']
+        total_count = count_data.total()
 
         # list comp to sort data types into usable format
         sorted_count_data = sorted([[k,v/total_count]
-                                    for k,v in count_data.items()
-                                    if k is not np.nan] # gets rid of np.nan
+                                    for k,v in count_data.items()]
                                    )
         count_data_headers = [[col_name, 'Count']]
         formatted_data = count_data_headers + sorted_count_data
@@ -204,26 +212,46 @@ class DataVisualization():
         if ws['A1'].value == None: # check ws2 is empty
             for row_num, row_data in enumerate(formatted_data, start=2):
                 ws.append(row_data)
-                # convert to percentage
+                # convert to percentage, specific to piechart
                 ws.cell(row=row_num, column=2).number_format = '0.0%'
 
 
+    # def _format_general(self):
 
+    # ??? Would this be better as Class format_data(), with general code and then specific functions for each type of chart
+    def format_data(self, df, ws, col_name, charttype):
+        '''Generalized function for formatting data.
+            Pass in charttype to format in specific way'''
+        
+        ### GENERAL
+        # self._format_general()  # private method, vs public
 
-    def draw_linechart(self, ws):
+        # create column for data
+        data = df.loc[:, col_name]
+
+        # creates count_date
+        count_data = Counter(list(data))
+        count_data.pop(np.nan, None) # pop np.nan from data, if nonexistent then do nothing
+    
+        ### CHART SPECIFIC
+
+        # if charttype == linechart:
+
+        # if charttype == piechart:
+
+    def draw_linechart(self, ws, x_axis, y_axis, chart_title):
         '''This function draws a line chart and saves it into a cell'''
-        # TODO generalize title
 
         # Line Chart
         linechart = LineChart()
-        linechart.title = 'Frequency of Firewall Creation by Date'
+        linechart.title = chart_title
         linechart.style = 12
-        linechart.y_axis.title = 'Firewalls Created'
+        linechart.y_axis.title = y_axis
         linechart.y_axis.crossAx = 500 # wth does this even mean
         linechart.x_axis = DateAxis(crossAx=100)
         linechart.x_axis.number_format = 'd-mmm'
         linechart.x_axis.majorTimeUnit = 'days'
-        linechart.x_axis.title = 'Date'
+        linechart.x_axis.title = x_axis
         
         # where to reference data from
         data = Reference(ws,
